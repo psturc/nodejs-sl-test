@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_URL = process.env.FRONTEND_URL || 'http://0.0.0.0:3001';
+const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const App = () => {
   const [todos, setTodos] = useState([]);

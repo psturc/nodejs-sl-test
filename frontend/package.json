@@ -3,15 +3,15 @@
   "version": "1.0.0",
   "dependencies": {
     "axios": "^1.6.2",
+    "env-cmd": "^10.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "env-cmd -f .dev.env react-scripts start",
+    "build": "rm -rf build && env-cmd -f .prod.env react-scripts build",
+    "build:dev": "rm -rf build && env-cmd -x -f .dev.env react-scripts build"
   },
   "eslintConfig": {
     "extends": [
@@ -30,9 +30,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "devDependencies": {
-    "dotenv": "^16.4.7",
-    "dotenv-cli": "^7.4.4"
   }
 }
