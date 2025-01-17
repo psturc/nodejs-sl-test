@@ -45,6 +45,7 @@ const startServer = async () => {
   });
   
   app.put('/todos/:id', async (req, res) => {
+    console.log("test");
     try {
       const todo = await Todo.findByIdAndUpdate(
         req.params.id,
