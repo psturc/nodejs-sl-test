@@ -30,6 +30,7 @@ const startServer = async () => {
   const Todo = mongoose.model('Todo', todoSchema);
   
    app.get('/todos', async (req, res) => {
+    console.log("test")
     try {
       const todos = await Todo.find().sort({ createdAt: -1 });
       res.json(todos);
