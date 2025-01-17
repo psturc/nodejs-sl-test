@@ -8,6 +8,10 @@ const app = express();
 const port = process.env.PORT || 3001;
 var mongoServer;
 
+function testcoverage(a) {
+    console.log(a)
+}
+
 const startServer = async () => {
   await connectToDatabase();
   
@@ -39,6 +43,7 @@ const startServer = async () => {
       const todo = new Todo({ text: req.body.text });
       await todo.save();
       res.status(201).json(todo);
+      testcoverage("testcoverage string")
     } catch (err) {
       res.status(400).json({ error: 'Failed to create todo' });
     }
