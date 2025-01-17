@@ -27,7 +27,7 @@ spec:
             - "sh"
             - "-c"
             - >
-              npm i -g slnodejs &&
+              npm i -g slnodejs@6.1.991 &&
               cp -r /opt/app-root/src/.npm-global /shared-dir &&
               ls -la /shared-dir/
           volumeMounts:

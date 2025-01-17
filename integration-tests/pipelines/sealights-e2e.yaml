@@ -156,7 +156,7 @@ spec:
 
               cd test
               npm install
-              npm i -g slnodejs
+              npm i -g slnodejs@6.1.991
 
               teststage="nodejs e2e $(date +%s)"
               slnodejs start --token $SL_TOKEN --teststage $teststage --buildsessionid $BUILD_SESSION_ID
