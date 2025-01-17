@@ -16,9 +16,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+            value: https://github.com/psturc/tekton-integration-catalog.git
           - name: revision
-            value: main
+            value: add-target-branch-to-test-metadata
           - name: pathInRepo
             value: common/tasks/test-metadata/0.1/test-metadata.yaml
       params:
@@ -48,16 +48,6 @@ spec:
         results:
           - name: BASE_URL
             description: The base URL of the deployed service
-        params:
-          - name: image
-            type: string
-            description: Image for the deployment container
-          - name: git-url
-            type: string
-            description: git repo
-          - name: git-branch
-            type: string
-            description: git branch
         steps:
           - name: apply-deployment
             image: registry.redhat.io/openshift4/ose-cli:v4.15
@@ -84,7 +74,12 @@ spec:
               set -eux
               
               yum install git -y
-              git clone "$(tasks.test-metadata.results.git-url)" -b "$(tasks.test-metadata.results.source-repo-branch)" .
+
+              BRANCH_NAME="$(tasks.test-metadata.results.target-repo-branch)"
+              if [[ "$(tasks.test-metadata.results.test-event-type)" == "pull_request" ]]; then
+                BRANCH_NAME="$(tasks.test-metadata.results.source-repo-branch)"
+              fi
+              git clone "$(tasks.test-metadata.results.git-url)" -b $BRANCH_NAME .
 
               eval $OC_LOGIN_COMMAND
 
@@ -120,13 +115,6 @@ spec:
               oc wait --for=condition=ready pod -l app=todo-frontend --timeout=1m
 
               echo -n "https://${HOSTNAME}" > /tekton/results/BASE_URL
-      params:
-        - name: image
-          value: "$(tasks.sealights-get-refs.results.container-image)"
-        - name: git-url
-          value: "$(tasks.test-metadata.results.git-url)"
-        - name: git-branch
-          value: "$(tasks.test-metadata.results.source-repo-branch)"
     - name: run-nodejs-tests
       runAfter:
         - deploy
@@ -160,7 +148,12 @@ spec:
                   exit 1
               fi
 
-              git clone "$(tasks.test-metadata.results.git-url)" -b "$(tasks.test-metadata.results.source-repo-branch)" .
+              BRANCH_NAME="$(tasks.test-metadata.results.target-repo-branch)"
+              if [[ "$(tasks.test-metadata.results.test-event-type)" == "pull_request" ]]; then
+                BRANCH_NAME="$(tasks.test-metadata.results.source-repo-branch)"
+              fi
+              git clone "$(tasks.test-metadata.results.git-url)" -b $BRANCH_NAME .
+
               cd test
               npm install
               npm i -g slnodejs

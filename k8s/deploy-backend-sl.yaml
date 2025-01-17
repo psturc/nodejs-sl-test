@@ -38,7 +38,10 @@ spec:
           image: "${IMAGE}"    # Placeholder replaced dynamically
           env:
             - name: BUILD_SESSION_ID
-              value: "${BUILD_SESSION_ID}"
+              valueFrom:
+                secretKeyRef:
+                  name: sealights-credentials
+                  key: bsid
             - name: SL_TOKEN
               valueFrom:
                 secretKeyRef:
