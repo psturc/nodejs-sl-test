@@ -1,0 +1,178 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: sealights-e2e
+spec:
+  description: |
+    An integration test that exercises Sealights capabilities with Node.js...
+  params:
+    - description: Snapshot of the application
+      name: SNAPSHOT
+      default: '{"components": [{"name":"test-app", "containerImage": "quay.io/example/repo:latest"}]}'
+      type: string
+  tasks:
+    - name: test-metadata
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: common/tasks/test-metadata/0.1/test-metadata.yaml
+      params:
+        - name: SNAPSHOT
+          value: $(params.SNAPSHOT)
+        - name: test-name
+          value: $(context.pipelineRun.name)
+    - name: sealights-get-refs
+      runAfter:
+        - test-metadata
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+          - name: revision
+            value: main
+          - name: pathInRepo
+            value: tasks/sealights/sealights-get-refs/0.1/sealights-get-refs.yaml
+      params:
+        - name: SNAPSHOT
+          value: $(params.SNAPSHOT)
+    - name: deploy
+      runAfter:
+        - sealights-get-refs
+      taskSpec:
+        results:
+          - name: BASE_URL
+            description: The base URL of the deployed service
+        params:
+          - name: image
+            type: string
+            description: Image for the deployment container
+          - name: git-url
+            type: string
+            description: git repo
+          - name: git-branch
+            type: string
+            description: git branch
+        steps:
+          - name: apply-deployment
+            image: registry.redhat.io/openshift4/ose-cli:v4.15
+            workingDir: /workspace
+            env:
+              - name: JOB_SPEC
+                value: $(tasks.test-metadata.results.job-spec)
+              - name: BUILD_SESSION_ID
+                value: $(tasks.sealights-get-refs.results.sealights-bsid)
+              - name: IMAGE
+                value: "$(tasks.sealights-get-refs.results.container-image)"
+              - name: SL_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: integration-pipeline-credentials
+                    key: sl-token
+              - name: OC_LOGIN_COMMAND
+                valueFrom:
+                  secretKeyRef:
+                    name: integration-pipeline-credentials
+                    key: oc-login-command
+            script: |
+              #!/bin/sh
+              set -eux
+              
+              yum install git -y
+              git clone "$(tasks.test-metadata.results.git-url)" -b "$(tasks.test-metadata.results.source-repo-branch)" .
+
+              eval $OC_LOGIN_COMMAND
+
+              NS="todo-app-$(date +%s)"
+              oc new-project $NS
+
+              # Create the sealights-credentials secret
+              oc create secret generic sealights-credentials \
+              --from-literal=token=$SL_TOKEN \
+              --from-literal=bsid=$BUILD_SESSION_ID \
+              --dry-run=client -o yaml | kubectl apply -f -
+
+              oc apply -f k8s/deploy-services.yaml
+
+              if [[ $IMAGE == *"backend"* ]]; then
+                sed -i "s|\${IMAGE}|$IMAGE|g" k8s/deploy-backend-sl.yaml
+                oc create -f k8s/deploy-backend-sl.yaml
+                oc create -f k8s/deploy-frontend-original.yaml
+              else
+                sed -i "s|\${IMAGE}|$IMAGE|g" k8s/deploy-frontend-sl.yaml
+                oc create -f k8s/deploy-backend-original.yaml
+                oc create -f k8s/deploy-frontend-sl.yaml
+              fi
+
+              oc create route edge frontend-route --service=todo-frontend-service
+              HOSTNAME=$(oc get route frontend-route -o jsonpath='{.spec.host}')
+              oc create route edge backend-route \
+              --service=todo-backend-service \
+              --path=/todos \
+              --hostname=$HOSTNAME \
+
+              oc wait --for=condition=ready pod -l app=todo-backend --timeout=5m
+              oc wait --for=condition=ready pod -l app=todo-frontend --timeout=1m
+
+              echo -n "https://${HOSTNAME}" > /tekton/results/BASE_URL
+      params:
+        - name: image
+          value: "$(tasks.sealights-get-refs.results.container-image)"
+        - name: git-url
+          value: "$(tasks.test-metadata.results.git-url)"
+        - name: git-branch
+          value: "$(tasks.test-metadata.results.source-repo-branch)"
+    - name: run-nodejs-tests
+      runAfter:
+        - deploy
+      taskSpec:
+        steps:
+          - name: run-nodejs-tests
+            image: quay.io/psturc/test-images:puppeteer-runner
+            imagePullPolicy: Always
+            workingDir: /workspace
+            env:
+              - name: SL_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: integration-pipeline-credentials
+                    key: sl-token
+              - name: OC_LOGIN_COMMAND
+                valueFrom:
+                  secretKeyRef:
+                    name: integration-pipeline-credentials
+                    key: oc-login-command
+              - name: BUILD_SESSION_ID
+                value: $(tasks.sealights-get-refs.results.sealights-bsid)
+              - name: BASE_URL
+                value: "$(tasks.deploy.results.BASE_URL)"
+            script: |
+              #!/bin/sh
+              set -eux
+              
+              if [ -z "$BASE_URL" ]; then
+                  echo "Error: BASE_URL is not set!"
+                  exit 1
+              fi
+
+              git clone "$(tasks.test-metadata.results.git-url)" -b "$(tasks.test-metadata.results.source-repo-branch)" .
+              cd test
+              npm install
+              npm i -g slnodejs
+
+              teststage="nodejs e2e $(date +%s)"
+              slnodejs start --token $SL_TOKEN --teststage $teststage --buildsessionid $BUILD_SESSION_ID
+              
+              export FRONTEND_URL="$BASE_URL"
+              export BACKEND_URL="$BASE_URL"
+
+              npm run test:e2e
+              cat test-results.xml
+              slnodejs uploadReports --token $SL_TOKEN --teststage $teststage --buildsessionid $BUILD_SESSION_ID --reportfile test-results.xml
+
+              slnodejs end --token $SL_TOKEN --buildsessionid $BUILD_SESSION_ID
