@@ -158,6 +158,8 @@ spec:
               npm install
               npm i -g slnodejs@6.1.991
 
+              export NODE_DEBUG=sl
+
               teststage="nodejs-e2e-$(date +%s)"
               slnodejs start --teststage $teststage --buildsessionid $BUILD_SESSION_ID --token $SL_TOKEN
               
@@ -166,6 +168,8 @@ spec:
 
               npm run test:e2e
               cat test-results.xml
+              sleep 10
               slnodejs uploadReports --teststage $teststage --buildsessionid $BUILD_SESSION_ID --reportfile test-results.xml --token $SL_TOKEN
 
+              sleep 10
               slnodejs end --buildsessionid $BUILD_SESSION_ID --token $SL_TOKEN

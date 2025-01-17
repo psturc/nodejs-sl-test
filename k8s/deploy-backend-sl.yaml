@@ -51,7 +51,7 @@ spec:
             - "sh"
             - "-c"
             - >
-              cp -r /shared-dir/.npm-global /opt/app-root/src &&
+              cp -r /shared-dir/.npm-global /opt/app-root/src && export NODE_DEBUG=sl &&
               slnodejs run --token $SL_TOKEN --buildsessionid $BUILD_SESSION_ID --workspacepath . --useinitialcolor true -- ./server.js
           volumeMounts:
             - name: shared-dir
