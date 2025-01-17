@@ -159,13 +159,13 @@ spec:
               npm i -g slnodejs@6.1.991
 
               teststage="nodejs-e2e-$(date +%s)"
-              slnodejs start --token $SL_TOKEN --teststage $teststage --buildsessionid $BUILD_SESSION_ID
+              slnodejs start --teststage $teststage --buildsessionid $BUILD_SESSION_ID --token $SL_TOKEN
               
               export FRONTEND_URL="$BASE_URL"
               export BACKEND_URL="$BASE_URL"
 
               npm run test:e2e
               cat test-results.xml
-              slnodejs uploadReports --token $SL_TOKEN --teststage $teststage --buildsessionid $BUILD_SESSION_ID --reportfile test-results.xml
+              slnodejs uploadReports --teststage $teststage --buildsessionid $BUILD_SESSION_ID --reportfile test-results.xml --token $SL_TOKEN
 
-              slnodejs end --token $SL_TOKEN --buildsessionid $BUILD_SESSION_ID
+              slnodejs end --buildsessionid $BUILD_SESSION_ID --token $SL_TOKEN
