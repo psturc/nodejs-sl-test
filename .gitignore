@@ -132,3 +132,5 @@ dist
 frontend/build
 frontend/sl_build
 frontend/package-lock.json
+
+test/test-results.xml

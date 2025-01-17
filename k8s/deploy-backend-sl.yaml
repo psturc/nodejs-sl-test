@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-backend
+  labels:
+    app: todo-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-backend
+  template:
+    metadata:
+      labels:
+        app: todo-backend
+    spec:
+      volumes:
+        - name: shared-dir
+          emptyDir: {}
+        - name: sealights-credentials
+          secret:
+            secretName: sealights-credentials
+      initContainers:
+        - name: install-sl-nodejs
+          image: registry.access.redhat.com/ubi8/nodejs-20-minimal:latest
+          command:
+            - "sh"
+            - "-c"
+            - >
+              npm i -g slnodejs &&
+              cp -r /opt/app-root/src/.npm-global /shared-dir &&
+              ls -la /shared-dir/
+          volumeMounts:
+            - name: shared-dir
+              mountPath: /shared-dir
+      containers:
+        - name: app-container
+          image: "${IMAGE}"    # Placeholder replaced dynamically
+          env:
+            - name: BUILD_SESSION_ID
+              value: "${BUILD_SESSION_ID}"
+            - name: SL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: sealights-credentials
+                  key: token
+          command:
+            - "sh"
+            - "-c"
+            - >
+              cp -r /shared-dir/.npm-global /opt/app-root/src &&
+              slnodejs run --token $SL_TOKEN --buildsessionid $BUILD_SESSION_ID --workspacepath . --useinitialcolor true -- ./server.js
+          volumeMounts:
+            - name: shared-dir
+              mountPath: /shared-dir
+            - name: sealights-credentials
+              mountPath: /sealights
+              readOnly: true
+          ports:
+            - containerPort: 3001
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /todos
+              port: 3001
+              scheme: HTTP

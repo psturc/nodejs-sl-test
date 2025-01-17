@@ -82,12 +82,12 @@ describe('Todo App E2E Tests', function() {
     it('should add a new todo through UI', async function() {
       await page.goto(frontendURL);
       
-           await page.type('[data-testid="todo-input"]', 'New Todo Item');
+      await page.type('[data-testid="todo-input"]', 'New Todo Item');
       await page.click('[data-testid="add-todo-button"]');
 
-           await page.waitForSelector('[data-testid^="todo-item-"]');
+      await page.waitForSelector('[data-testid^="todo-item-"]');
       
-           const todoText = await page.$eval('[data-testid^="todo-item-"]', el => el.textContent);
+      const todoText = await page.$eval('[data-testid^="todo-item-"]', el => el.textContent);
       expect(todoText).to.include('New Todo Item');
     });
 
@@ -101,7 +101,7 @@ describe('Todo App E2E Tests', function() {
            await page.waitForSelector('[data-testid^="todo-checkbox-"]');
       await page.click('[data-testid^="todo-checkbox-"]');
 
-      await delay(100);
+      await delay(1000);
 
            const hasStrike = await page.$eval('[data-testid^="todo-item-"]', 
         el => el.querySelector('span').classList.contains('line-through')

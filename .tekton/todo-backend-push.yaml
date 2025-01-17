@@ -164,6 +164,45 @@ spec:
       workspaces:
       - name: basic-auth
         workspace: git-auth
+    - name: sealights-instrumentation
+      runAfter:
+        - clone-repository
+      taskRef:
+        resolver: git
+        params:
+          - name: url
+            value: https://github.com/psturc/tekton-integration-catalog.git
+          - name: revision
+            value: KFLUXDP-125
+          - name: pathInRepo
+            value: tasks/sealights/sealights-nodejs/0.1/sealights-nodejs.yaml
+      params:
+        - name: source-artifact
+          value: $(tasks.clone-repository.results.SOURCE_ARTIFACT)
+        - name: nodejs-version
+          value: "20"
+        - name: sealights-secret
+          value: "sealights-credentials"
+        - name: component
+          value: 'nodejs-todoapp-backend'
+        - name: branch
+          value: '{{ source_branch }}'
+        - name: revision
+          value: '{{ revision }}'
+        - name: repository-url
+          value: '{{ repo_url }}'
+        - name: test-event
+          value: '{{ event_type }}'
+        - name: pull-request-number
+          value: '{{ pull_request_number }}'
+        - name: target-branch
+          value: '{{ target_branch }}'
+        # - name: oci-storage
+        #   value: $(params.output-image).sealights.git
+        - name: exclude
+          value: ['test/*']
+        - name: workspace-path
+          value: "backend"
     - name: prefetch-dependencies
       params:
       - name: input
@@ -175,7 +214,7 @@ spec:
       - name: ociArtifactExpiresAfter
         value: $(params.image-expires-after)
       runAfter:
-      - clone-repository
+      - sealights-instrumentation
       taskRef:
         params:
         - name: name
