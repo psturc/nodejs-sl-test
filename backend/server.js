@@ -12,6 +12,10 @@ function testcoverage(a) {
     console.log(a)
 }
 
+function abc() {
+    console.log("abc")
+}
+
 const startServer = async () => {
   await connectToDatabase();
   
