@@ -8,6 +8,14 @@ const app = express();
 const port = process.env.PORT || 3001;
 var mongoServer;
 
+function testcoverage(a) {
+  console.log(a)
+}
+
+function abc() {
+  console.log("abc test23")
+}
+
 const startServer = async () => {
   await connectToDatabase();
   
@@ -60,6 +68,7 @@ const startServer = async () => {
   
   app.delete('/todos/:id', async (req, res) => {
     try {
+      testcoverage("deleting", req.params.id)
       const todo = await Todo.findByIdAndDelete(req.params.id);
       if (!todo) return res.status(404).json({ error: 'Todo not found' });
       res.status(204).send();
