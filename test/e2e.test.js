@@ -5,6 +5,7 @@ const axios = require('axios');
 let api;
 
 describe('Todo App E2E Tests', function() {
+  this.timeout(60000);
   let browser;
   let page;
   const backendURL = process.env.BACKEND_URL || 'http://0.0.0.0:3001';
@@ -22,6 +23,16 @@ describe('Todo App E2E Tests', function() {
       args: ['--no-sandbox']
     });
     page = await browser.newPage();
+
+    // Print out messages from Browser's Developer Console to the console log
+    page.on('console', async msg => {
+      const args = msg.args();
+      const vals = [];
+      for (let i = 0; i < args.length; i++) {
+        vals.push(await args[i].jsonValue());
+      }
+      console.log(vals.map(v => typeof v === 'object' ? JSON.stringify(v, null, 2) : v).join('\t'));
+    });
   });
 
   afterEach(async function() {
@@ -29,6 +40,10 @@ describe('Todo App E2E Tests', function() {
   });
 
   after(async function() {
+    this.timeout(20000);
+    // Give some time to the Sealights agent to process the footprints
+    // and to sent them to the Sealights backend
+    await delay(10000);
     await browser.close();
   });
 

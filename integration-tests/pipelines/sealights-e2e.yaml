@@ -33,9 +33,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/konflux-ci/tekton-integration-catalog.git
+            value: https://github.com/psturc/tekton-integration-catalog.git
           - name: revision
-            value: main
+            value: get-refs-add-pristine-image-source-artifact
           - name: pathInRepo
             value: tasks/sealights/sealights-get-refs/0.1/sealights-get-refs.yaml
       params:
@@ -57,8 +57,10 @@ spec:
                 value: $(tasks.test-metadata.results.job-spec)
               - name: BUILD_SESSION_ID
                 value: $(tasks.sealights-get-refs.results.sealights-bsid)
-              - name: IMAGE
+              - name: COMPONENT_IMAGE
                 value: "$(tasks.sealights-get-refs.results.container-image)"
+              - name: COMPONENT_SOURCE_ARTIFACT
+                value: "$(tasks.sealights-get-refs.results.component-source-artifact)"
               - name: SL_TOKEN
                 valueFrom:
                   secretKeyRef:
@@ -94,12 +96,13 @@ spec:
 
               oc apply -f k8s/deploy-services.yaml
 
-              if [[ $IMAGE == *"backend"* ]]; then
-                sed -i "s|\${IMAGE}|$IMAGE|g" k8s/deploy-backend-sl.yaml
+              if [[ $COMPONENT_IMAGE == *"backend"* ]]; then
+                sed -i "s|\${IMAGE}|$COMPONENT_IMAGE|g" k8s/deploy-backend-sl.yaml
                 oc create -f k8s/deploy-backend-sl.yaml
                 oc create -f k8s/deploy-frontend-original.yaml
               else
-                sed -i "s|\${IMAGE}|$IMAGE|g" k8s/deploy-frontend-sl.yaml
+                sed -i "s|\${IMAGE}|$COMPONENT_IMAGE|g" k8s/deploy-frontend-sl.yaml
+                sed -i "s|\${SOURCE_ARTIFACT}|$COMPONENT_SOURCE_ARTIFACT|g" k8s/deploy-frontend-sl.yaml
                 oc create -f k8s/deploy-backend-original.yaml
                 oc create -f k8s/deploy-frontend-sl.yaml
               fi
@@ -156,21 +159,12 @@ spec:
 
               cd test
               npm install
-              npm i -g slnodejs@6.1.991
 
               export NODE_DEBUG=sl
               export SL_LOG_LEVEL=debug
 
-              teststage="nodejs-e2e-$(date +%s)"
-              slnodejs start --teststage $teststage --buildsessionid $BUILD_SESSION_ID --token $SL_TOKEN
-              
               export FRONTEND_URL="$BASE_URL"
               export BACKEND_URL="$BASE_URL"
 
-              npm run test:e2e
-              cat test-results.xml
-              sleep 10
-              slnodejs uploadReports --teststage $teststage --buildsessionid $BUILD_SESSION_ID --reportfile test-results.xml --token $SL_TOKEN
-
-              sleep 10
-              slnodejs end --buildsessionid $BUILD_SESSION_ID --token $SL_TOKEN
+              teststage="nodejs-mocha-tests-$(date +%s)"
+              npx slnodejs mocha --token $SL_TOKEN --buildsessionid $BUILD_SESSION_ID --teststage $teststage -- e2e.test.js
