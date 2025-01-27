@@ -40,10 +40,9 @@ describe('Todo App E2E Tests', function() {
   });
 
   after(async function() {
-    this.timeout(20000);
-    // Give some time to the Sealights agent to process the footprints
-    // and to sent them to the Sealights backend
-    await delay(10000);
+    this.timeout(30000);
+    console.log("DEBUG (in after node): tests are finished, delaying for 20 secs to send footprints before closing the browser...")
+    await delay(20000);
     await browser.close();
   });
 
