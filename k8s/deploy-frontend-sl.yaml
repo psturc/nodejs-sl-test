@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-frontend
+  template:
+    metadata:
+      labels:
+        app: todo-frontend
+    spec:
+      volumes:
+        - name: shared-dir
+          emptyDir: {}
+        - name: sealights-credentials
+          secret:
+            secretName: sealights-credentials
+      initContainers:
+        - name: app-container
+          image: "${IMAGE}"
+          command:
+            - "sh"
+            - "-c"
+            - >
+              cp -r /opt/app-root/src/build /shared-dir
+          volumeMounts:
+            - name: shared-dir
+              mountPath: /shared-dir
+        - name: get-source-artifact
+          image: quay.io/redhat-appstudio/build-trusted-artifacts:latest@sha256:52f1391e6f1c472fd10bb838f64fae2ed3320c636f536014978a5ddbdfc6b3af
+          args:
+            - "use"
+            - "${SOURCE_ARTIFACT}=/shared-dir/source"
+          volumeMounts:
+            - name: shared-dir
+              mountPath: /shared-dir
+      containers:
+        - name: scan-and-run
+          image: registry.access.redhat.com/ubi8/nodejs-20:latest
+          env:
+            - name: BUILD_SESSION_ID
+              valueFrom:
+                secretKeyRef:
+                  name: sealights-credentials
+                  key: bsid
+            - name: SL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: sealights-credentials
+                  key: token
+          command:
+            - "sh"
+            - "-c"
+            - >
+              set -x && export NODE_DEBUG=sl SL_LOG_LEVEL=debug &&
+              npm i -g slnodejs@6.1.991 sirv-cli &&
+              cp -r /shared-dir/build /shared-dir/source/frontend && cd /shared-dir/source/ &&
+              slnodejs scan --token $SL_TOKEN --buildsessionid $BUILD_SESSION_ID --scm git --instrumentForBrowsers --workspacepath frontend/build --outputpath frontend/sl_build --babylonPlugins jsx &&
+              sirv frontend/sl_build --cors --single --host --port 3000
+          volumeMounts:
+            - name: shared-dir
+              mountPath: /shared-dir
+            - name: sealights-credentials
+              mountPath: /sealights
+              readOnly: true
+          ports:
+          - containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+              scheme: HTTP
