@@ -40,9 +40,15 @@ describe('Todo App E2E Tests', function() {
   });
 
   after(async function() {
-    this.timeout(30000);
-    console.log("DEBUG (in after node): tests are finished, delaying for 20 secs to send footprints before closing the browser...")
-    await delay(20000);
+    await page.evaluate(() => {
+      return new Promise((resolve) => {
+          if (window && window.$SealightsAgent && window.$SealightsAgent.sendAllFootprints) {
+              window.$SealightsAgent.sendAllFootprints().then(resolve).catch(resolve);
+          } else {
+              resolve();
+          }
+      });
+    });
     await browser.close();
   });
 
