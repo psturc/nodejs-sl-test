@@ -16,9 +16,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/psturc/tekton-integration-catalog.git
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
           - name: revision
-            value: add-target-branch-to-test-metadata
+            value: main
           - name: pathInRepo
             value: common/tasks/test-metadata/0.1/test-metadata.yaml
       params:
@@ -33,9 +33,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/psturc/tekton-integration-catalog.git
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
           - name: revision
-            value: get-refs-add-pristine-image-source-artifact
+            value: main
           - name: pathInRepo
             value: tasks/sealights/sealights-get-refs/0.1/sealights-get-refs.yaml
       params:
