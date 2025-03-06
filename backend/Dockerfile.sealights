@@ -1,0 +1,23 @@
+FROM registry.access.redhat.com/ubi8/nodejs-20:latest
+
+USER root
+
+ARG BSID
+ARG AGENT_VERSION
+
+ENV BSID ${BSID}
+ENV AGENT_VERSION ${AGENT_VERSION}
+ENV SEALIGHTS_TOKEN_FILE /opt/app-root/src/sl-token
+
+WORKDIR /opt/app-root/src
+COPY . .
+
+RUN --mount=type=secret,id=sealights-credentials/token cp /run/secrets/sealights-credentials/token $SEALIGHTS_TOKEN_FILE
+COPY package*.json ./
+RUN npm i -g "slnodejs@${AGENT_VERSION}"
+
+RUN npm install
+EXPOSE 3001
+
+ENV NODE_DEBUG=sl
+ENTRYPOINT ["/bin/sh", "-c", "slnodejs run --buildsessionid $BSID --workspacepath . --useinitialcolor true --tokenfile $SEALIGHTS_TOKEN_FILE  -- ./server.js"]
