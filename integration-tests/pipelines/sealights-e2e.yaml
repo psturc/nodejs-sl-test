@@ -62,10 +62,15 @@ spec:
                   secretKeyRef:
                     name: integration-pipeline-credentials
                     key: oc-login-command
-              - name: SEALIGHTS_IMAGE_PULL_SECRET
+              - name: SEALIGHTS_IMAGE_PULL_SECRET_BACKEND
                 valueFrom:
                   secretKeyRef:
                     name: imagerepository-for-slnodejs-todo-todo-backend-sealights-image-pull
+                    key: .dockerconfigjson
+              - name: SEALIGHTS_IMAGE_PULL_SECRET_FRONTEND
+                valueFrom:
+                  secretKeyRef:
+                    name: imagerepository-for-slnodejs-todo-todo-frontend-sealights-image-pull
                     key: .dockerconfigjson
             script: |
               #!/bin/sh
@@ -84,24 +89,24 @@ spec:
               NS="todo-app-$(date +%s)"
               oc new-project $NS
 
-              # Create the pull secret for pulling private instrumented container image
-              echo $SEALIGHTS_IMAGE_PULL_SECRET > pull-secret.json
-              cat pull-secret.json
-              oc create secret docker-registry sealights-pull-secret --from-file=.dockerconfigjson=pull-secret.json -n $NS
-              oc secrets link default sealights-pull-secret --for=pull -n $NS
-
               oc apply -f k8s/deploy-services.yaml
 
               DEFAULT_BACKEND_IMAGE_REF=quay.io/redhat-user-workloads/psturc-tenant/todo-backend:latest
               DEFAULT_FRONTEND_IMAGE_REF=quay.io/redhat-user-workloads/psturc-tenant/todo-frontend:latest
 
               if [[ $COMPONENT_IMAGE == *"backend"* ]]; then
+                echo $SEALIGHTS_IMAGE_PULL_SECRET_BACKEND > pull-secret.json
                 sed -i "s|\${IMAGE}|$COMPONENT_IMAGE|g" k8s/deploy-backend.yaml
                 sed -i "s|\${IMAGE}|$DEFAULT_FRONTEND_IMAGE_REF|g" k8s/deploy-frontend.yaml
               else
+                echo $SEALIGHTS_IMAGE_PULL_SECRET_FRONTEND > pull-secret.json
                 sed -i "s|\${IMAGE}|$DEFAULT_BACKEND_IMAGE_REF|g" k8s/deploy-backend.yaml
                 sed -i "s|\${IMAGE}|$COMPONENT_IMAGE|g" k8s/deploy-frontend.yaml
               fi
+
+              # Create the pull secret for pulling private instrumented container image
+              oc create secret docker-registry sealights-pull-secret --from-file=.dockerconfigjson=pull-secret.json -n $NS
+              oc secrets link default sealights-pull-secret --for=pull -n $NS
 
               oc create -f k8s/deploy-backend.yaml
               oc create -f k8s/deploy-frontend.yaml

@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/nodejs-20:latest AS builder
+FROM registry.access.redhat.com/ubi8/nodejs-20:latest as builder
 WORKDIR /opt/app-root/src
 COPY frontend .
 RUN npm install

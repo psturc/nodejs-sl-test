@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/nodejs-20:latest AS builder
+FROM registry.access.redhat.com/ubi8/nodejs-20:latest as builder
 
 USER root
 
@@ -8,12 +8,12 @@ ENV BSID=${BSID} AGENT_VERSION=${AGENT_VERSION} SEALIGHTS_TOKEN_FILE=/opt/app-ro
     BUILD_DIR=build SL_BUILD_DIR=sl_build NODE_DEBUG=sl
 
 WORKDIR /opt/app-root/src
-
-RUN --mount=type=secret,id=sealights-credentials/token cp /run/secrets/sealights-credentials/token $SEALIGHTS_TOKEN_FILE
 COPY . .
+RUN --mount=type=secret,id=sealights-credentials/token cp /run/secrets/sealights-credentials/token $SEALIGHTS_TOKEN_FILE
 RUN chown -R $(whoami) .
-WORKDIR /opt/app-root/src/frontend
+RUN chmod +r ${SEALIGHTS_TOKEN_FILE}
 
+WORKDIR /opt/app-root/src/frontend
 RUN npm install
 RUN npm run build
 
