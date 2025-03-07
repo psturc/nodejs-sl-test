@@ -21,6 +21,10 @@ const App = () => {
     }
   };
 
+  function test() {
+    console.log("test")
+  }
+
   const addTodo = async (e) => {
     e.preventDefault();
     try {
