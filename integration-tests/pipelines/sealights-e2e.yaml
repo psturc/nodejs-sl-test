@@ -16,9 +16,9 @@ spec:
         resolver: git
         params:
           - name: url
-            value: https://github.com/psturc/tekton-integration-catalog.git
+            value: https://github.com/konflux-ci/tekton-integration-catalog.git
           - name: revision
-            value: add-target-branch-to-test-metadata
+            value: main
           - name: pathInRepo
             value: common/tasks/test-metadata/0.1/test-metadata.yaml
       params:
@@ -55,20 +55,18 @@ spec:
             env:
               - name: JOB_SPEC
                 value: $(tasks.test-metadata.results.job-spec)
-              - name: BUILD_SESSION_ID
-                value: $(tasks.sealights-get-refs.results.sealights-bsid)
-              - name: IMAGE
+              - name: COMPONENT_IMAGE
                 value: "$(tasks.sealights-get-refs.results.container-image)"
-              - name: SL_TOKEN
-                valueFrom:
-                  secretKeyRef:
-                    name: integration-pipeline-credentials
-                    key: sl-token
               - name: OC_LOGIN_COMMAND
                 valueFrom:
                   secretKeyRef:
                     name: integration-pipeline-credentials
                     key: oc-login-command
+              - name: SEALIGHTS_IMAGE_PULL_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: imagerepository-for-slnodejs-todo-todo-backend-sealights-image-pull
+                    key: .dockerconfigjson
             script: |
               #!/bin/sh
               set -eux
@@ -86,23 +84,27 @@ spec:
               NS="todo-app-$(date +%s)"
               oc new-project $NS
 
-              # Create the sealights-credentials secret
-              oc create secret generic sealights-credentials \
-              --from-literal=token=$SL_TOKEN \
-              --from-literal=bsid=$BUILD_SESSION_ID \
-              --dry-run=client -o yaml | kubectl apply -f -
+              # Create the pull secret for pulling private instrumented container image
+              echo $SEALIGHTS_IMAGE_PULL_SECRET > pull-secret.json
+              cat pull-secret.json
+              oc create secret docker-registry sealights-pull-secret --from-file=.dockerconfigjson=pull-secret.json -n $NS
+              oc secrets link default sealights-pull-secret --for=pull -n $NS
 
               oc apply -f k8s/deploy-services.yaml
 
-              if [[ $IMAGE == *"backend"* ]]; then
-                sed -i "s|\${IMAGE}|$IMAGE|g" k8s/deploy-backend-sl.yaml
-                oc create -f k8s/deploy-backend-sl.yaml
-                oc create -f k8s/deploy-frontend-original.yaml
+              DEFAULT_BACKEND_IMAGE_REF=quay.io/redhat-user-workloads/psturc-tenant/todo-backend:latest
+              DEFAULT_FRONTEND_IMAGE_REF=quay.io/redhat-user-workloads/psturc-tenant/todo-frontend:latest
+
+              if [[ $COMPONENT_IMAGE == *"backend"* ]]; then
+                sed -i "s|\${IMAGE}|$COMPONENT_IMAGE|g" k8s/deploy-backend.yaml
+                sed -i "s|\${IMAGE}|$DEFAULT_FRONTEND_IMAGE_REF|g" k8s/deploy-frontend.yaml
               else
-                sed -i "s|\${IMAGE}|$IMAGE|g" k8s/deploy-frontend-sl.yaml
-                oc create -f k8s/deploy-backend-original.yaml
-                oc create -f k8s/deploy-frontend-sl.yaml
+                sed -i "s|\${IMAGE}|$DEFAULT_BACKEND_IMAGE_REF|g" k8s/deploy-backend.yaml
+                sed -i "s|\${IMAGE}|$COMPONENT_IMAGE|g" k8s/deploy-frontend.yaml
               fi
+
+              oc create -f k8s/deploy-backend.yaml
+              oc create -f k8s/deploy-frontend.yaml
 
               oc create route edge frontend-route --service=todo-frontend-service
               HOSTNAME=$(oc get route frontend-route -o jsonpath='{.spec.host}')
@@ -139,6 +141,8 @@ spec:
                 value: $(tasks.sealights-get-refs.results.sealights-bsid)
               - name: BASE_URL
                 value: "$(tasks.deploy.results.BASE_URL)"
+              - name: COMPONENT_IMAGE
+                value: "$(tasks.sealights-get-refs.results.container-image)"
             script: |
               #!/bin/sh
               set -eux
@@ -156,21 +160,22 @@ spec:
 
               cd test
               npm install
-              npm i -g slnodejs@6.1.991
+              npm i slnodejs@6.1.1006
 
               export NODE_DEBUG=sl
               export SL_LOG_LEVEL=debug
-
-              teststage="nodejs-e2e-$(date +%s)"
-              slnodejs start --teststage $teststage --buildsessionid $BUILD_SESSION_ID --token $SL_TOKEN
               
               export FRONTEND_URL="$BASE_URL"
               export BACKEND_URL="$BASE_URL"
 
-              npm run test:e2e
-              cat test-results.xml
-              sleep 10
-              slnodejs uploadReports --teststage $teststage --buildsessionid $BUILD_SESSION_ID --reportfile test-results.xml --token $SL_TOKEN
-
-              sleep 10
-              slnodejs end --buildsessionid $BUILD_SESSION_ID --token $SL_TOKEN
+              test_selector=""
+              teststage=""
+              
+              if [[ $COMPONENT_IMAGE == *"backend"* ]]; then
+                test_selector="Backend API"
+                teststage="nodejs-mocha-tests-backend-$(date +%s)"
+              else
+                test_selector="Frontend Integration"
+                teststage="nodejs-mocha-tests-frontend-$(date +%s)"
+              fi
+              npx slnodejs mocha --token $SL_TOKEN --buildsessionid $BUILD_SESSION_ID --teststage $teststage -- e2e.test.js --grep=$test_selector
