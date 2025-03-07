@@ -1,0 +1,33 @@
+FROM registry.access.redhat.com/ubi8/nodejs-20:latest AS builder
+
+USER root
+
+ARG BSID AGENT_VERSION
+
+ENV BSID=${BSID} AGENT_VERSION=${AGENT_VERSION} SEALIGHTS_TOKEN_FILE=/opt/app-root/src/sl-token \
+    BUILD_DIR=build SL_BUILD_DIR=sl_build NODE_DEBUG=sl
+
+WORKDIR /opt/app-root/src
+
+RUN --mount=type=secret,id=sealights-credentials/token cp /run/secrets/sealights-credentials/token $SEALIGHTS_TOKEN_FILE
+COPY . .
+RUN chown -R $(whoami) .
+WORKDIR /opt/app-root/src/frontend
+
+RUN npm install
+RUN npm run build
+
+RUN npm i -g "slnodejs@${AGENT_VERSION}"
+
+WORKDIR /opt/app-root/src
+RUN slnodejs scan --tokenfile $SEALIGHTS_TOKEN_FILE --buildsessionid $BSID --scm git --instrumentForBrowsers --workspacepath frontend/${BUILD_DIR} --outputpath frontend/${SL_BUILD_DIR} --babylonPlugins jsx
+
+FROM registry.access.redhat.com/ubi8/nodejs-20-minimal:latest
+ENV SL_BUILD_DIR=sl_build NODE_DEBUG=sl
+USER root
+WORKDIR /opt/app-root/src
+COPY --from=builder /opt/app-root/src/frontend/${SL_BUILD_DIR} ./${SL_BUILD_DIR}/
+RUN npm install sirv-cli -g
+
+EXPOSE 3000
+ENTRYPOINT ["/bin/sh", "-c", "sirv ${SL_BUILD_DIR} --cors --single --host --port 3000"]
