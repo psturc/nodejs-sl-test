@@ -83,6 +83,10 @@ const startServer = async () => {
 
 };
 
+function testFunc() {
+  console.log("test")
+}
+
 const connectToDatabase = async () => {
   mongoServer = await MongoMemoryServer.create();
   const mongoUri = mongoServer.getUri();

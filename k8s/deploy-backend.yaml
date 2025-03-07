@@ -15,7 +15,8 @@ spec:
     spec:
       containers:
       - name: todo-backend
-        image: quay.io/redhat-user-workloads-stage/psturc-tenant/todo-backend:latest
+        image: "${IMAGE}"
+        imagePullPolicy: Always
         ports:
         - containerPort: 3001
         readinessProbe:
