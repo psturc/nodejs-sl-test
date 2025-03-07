@@ -46,6 +46,7 @@ const App = () => {
         t._id === id ? { ...t, completed: !t.completed } : t
       ));
     } catch (err) {
+      test();
       setError('Failed to update todo');
     }
   };
