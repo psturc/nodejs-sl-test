@@ -5,6 +5,9 @@ RUN npm install
 RUN npm run build
 
 FROM registry.access.redhat.com/ubi8/nodejs-20-minimal:latest
+
+LABEL konflux.additional-tags="latest"
+
 WORKDIR /opt/app-root/src
 COPY --from=builder /opt/app-root/src/build ./build
 RUN npm install sirv-cli -g
