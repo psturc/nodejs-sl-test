@@ -18,6 +18,7 @@ RUN npm install
 RUN npm run build
 
 RUN npm i -g "slnodejs@${AGENT_VERSION}"
+RUN npm list -g slnodejs
 
 WORKDIR /opt/app-root/src
 RUN slnodejs scan --tokenfile $SEALIGHTS_TOKEN_FILE --buildsessionid $BSID --scm git --instrumentForBrowsers --workspacepath frontend/${BUILD_DIR} --outputpath frontend/${SL_BUILD_DIR} --babylonPlugins jsx

@@ -184,14 +184,14 @@ spec:
       runAfter:
         - clone-repository
       taskRef:
+        resolver: git
         params:
-        - name: name
-          value: sealights-nodejs-oci-ta
-        - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-sealights-nodejs-oci-ta:0.1@sha256:a6ab448f66da4729d1f3653b42ea97fe5f88aae2d4b4a5532d8457953e692068
-        - name: kind
-          value: task
-        resolver: bundles
+          - name: url
+            value: https://github.com/psturc/build-definitions.git
+          - name: revision
+            value: KFLUXDP-208
+          - name: pathInRepo
+            value: task/sealights-nodejs-oci-ta/0.1/sealights-nodejs-oci-ta.yaml
       params:
         - name: SOURCE_ARTIFACT
           value: $(tasks.clone-repository.results.SOURCE_ARTIFACT)
@@ -261,7 +261,7 @@ spec:
         value:
         - $(params.build-args[*])
         - "BSID=$(tasks.sealights-nodejs-instrumentation.results.sealights-bsid)"
-        - "AGENT_VERSION=6.1.1006"
+        - "AGENT_VERSION=$(tasks.sealights-nodejs-instrumentation.results.sealights-agent-version)"
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
       - name: SOURCE_ARTIFACT
