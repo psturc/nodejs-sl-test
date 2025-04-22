@@ -94,19 +94,19 @@ spec:
               DEFAULT_BACKEND_IMAGE_REF=quay.io/redhat-user-workloads/psturc-tenant/todo-backend:latest
               DEFAULT_FRONTEND_IMAGE_REF=quay.io/redhat-user-workloads/psturc-tenant/todo-frontend:latest
 
-              if [[ $COMPONENT_IMAGE == *"backend"* ]]; then
-                echo $SEALIGHTS_IMAGE_PULL_SECRET_BACKEND > pull-secret.json
-                sed -i "s|\${IMAGE}|$COMPONENT_IMAGE|g" k8s/deploy-backend.yaml
-                sed -i "s|\${IMAGE}|$DEFAULT_FRONTEND_IMAGE_REF|g" k8s/deploy-frontend.yaml
-              else
-                echo $SEALIGHTS_IMAGE_PULL_SECRET_FRONTEND > pull-secret.json
-                sed -i "s|\${IMAGE}|$DEFAULT_BACKEND_IMAGE_REF|g" k8s/deploy-backend.yaml
-                sed -i "s|\${IMAGE}|$COMPONENT_IMAGE|g" k8s/deploy-frontend.yaml
-              fi
+
+              echo $SEALIGHTS_IMAGE_PULL_SECRET_BACKEND > pull-secret-backend.json
+              echo $SEALIGHTS_IMAGE_PULL_SECRET_FRONTEND > pull-secret-frontend.json
+
+              sed -i "s|\${IMAGE}|"quay.io/redhat-user-workloads/psturc-tenant/todo-backend-sealights:todo-backend-on-pull-request-584dn-build-container"|g" k8s/deploy-backend.yaml
+              sed -i "s|\${IMAGE}|"quay.io/redhat-user-workloads/psturc-tenant/todo-frontend-sealights:todo-frontend-on-pull-request-mff4v-build-container"|g" k8s/deploy-frontend.yaml
 
               # Create the pull secret for pulling private instrumented container image
-              oc create secret docker-registry sealights-pull-secret --from-file=.dockerconfigjson=pull-secret.json -n $NS
-              oc secrets link default sealights-pull-secret --for=pull -n $NS
+              oc create secret docker-registry sealights-pull-secret-backend --from-file=.dockerconfigjson=pull-secret-backend.json -n $NS
+              oc secrets link default sealights-pull-secret-backend --for=pull -n $NS
+
+              oc create secret docker-registry sealights-pull-secret-frontend --from-file=.dockerconfigjson=pull-secret-frontend.json -n $NS
+              oc secrets link default sealights-pull-secret-frontend --for=pull -n $NS
 
               oc create -f k8s/deploy-backend.yaml
               oc create -f k8s/deploy-frontend.yaml
@@ -173,6 +173,15 @@ spec:
               export FRONTEND_URL="$BASE_URL"
               export BACKEND_URL="$BASE_URL"
 
+
+              SEALIGHTS_BUILD_NAME="$(date +"%Y.%m.%d.%H.%M.%S")"
+              curl \
+                --write-out "%{http_code}" --silent --output /dev/null \
+                --location "${SEALIGHTS_DOMAIN}/sl-api/v1/agent-apis/lab-ids/integ_main_7aef_nodejssltest/integration-build" \
+                --header "Authorization: Bearer ${SL_TOKEN}" \
+                --header 'Content-Type: application/json' \
+                --data "{ \"buildName\": \"${SEALIGHTS_BUILD_NAME}\" }"
+
               test_selector=""
               teststage=""
               
@@ -183,4 +192,4 @@ spec:
                 test_selector="Frontend Integration"
                 teststage="nodejs-mocha-tests-frontend-$(date +%s)"
               fi
-              npx slnodejs mocha --token $SL_TOKEN --buildsessionid $BUILD_SESSION_ID --teststage $teststage -- e2e.test.js --grep=$test_selector
+              npx slnodejs mocha --token $SL_TOKEN --labid integ_main_7aef_nodejssltest --teststage labid-test-stage -- e2e.test.js
