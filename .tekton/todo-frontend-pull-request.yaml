@@ -196,7 +196,7 @@ spec:
         - name: SOURCE_ARTIFACT
           value: $(tasks.clone-repository.results.SOURCE_ARTIFACT)
         - name: component
-          value: 'nodejs-todoapp-frontend'
+          value: 'nodejs-test'
         - name: branch
           value: '{{ source_branch }}'
         - name: revision
@@ -204,7 +204,7 @@ spec:
         - name: repository-url
           value: '{{ repo_url }}'
         - name: test-event
-          value: '{{ event_type }}'
+          value: 'push'
         - name: pull-request-number
           value: '{{ pull_request_number }}'
         - name: target-branch
