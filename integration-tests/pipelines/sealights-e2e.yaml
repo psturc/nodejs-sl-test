@@ -177,7 +177,7 @@ spec:
               SEALIGHTS_BUILD_NAME="$(date +"%Y.%m.%d.%H.%M.%S")"
               curl \
                 --write-out "%{http_code}" --silent --output /dev/null \
-                --location "${SEALIGHTS_DOMAIN}/sl-api/v1/agent-apis/lab-ids/integ_main_7aef_nodejssltest/integration-build" \
+                --location "https://redhat.sealights.co/sl-api/v1/agent-apis/lab-ids/integ_main_7aef_nodejssltest/integration-build" \
                 --header "Authorization: Bearer ${SL_TOKEN}" \
                 --header 'Content-Type: application/json' \
                 --data "{ \"buildName\": \"${SEALIGHTS_BUILD_NAME}\" }"
