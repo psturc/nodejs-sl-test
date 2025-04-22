@@ -21,4 +21,4 @@ RUN npm install
 EXPOSE 3001
 
 ENV NODE_DEBUG=sl
-ENTRYPOINT ["/bin/sh", "-c", "slnodejs run --buildsessionid $BSID --workspacepath . --useinitialcolor true --tokenfile $SEALIGHTS_TOKEN_FILE  -- ./server.js"]
+ENTRYPOINT ["/bin/sh", "-c", "slnodejs run --buildsessionid $BSID --workspacepath . --useinitialcolor true --tokenfile $SEALIGHTS_TOKEN_FILE --labid integ_main_7aef_nodejssltest  -- ./server.js"]
