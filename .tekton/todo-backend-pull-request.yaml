@@ -9,8 +9,7 @@ metadata:
     pipelinesascode.tekton.dev/cancel-in-progress: "true"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
     pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch
-      == "main" && ( "backend/***".pathChanged() || ".tekton/todo-backend-pull-request.yaml".pathChanged()
-      || "backend/Dockerfile.sealights".pathChanged() )
+      == "main" && ( "test/***".pathChanged() )
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: slnodejs-todo
@@ -198,7 +197,7 @@ spec:
         - name: component
           value: 'nodejs-todoapp-backend'
         - name: branch
-          value: '{{ source_branch }}'
+          value: 'unique-modules-test'
         - name: revision
           value: '{{ revision }}'
         - name: repository-url

@@ -20,7 +20,7 @@ RUN npm run build
 RUN npm i -g "slnodejs@${AGENT_VERSION}"
 
 WORKDIR /opt/app-root/src
-RUN slnodejs scan --tokenfile $SEALIGHTS_TOKEN_FILE --buildsessionid $BSID --scm git --instrumentForBrowsers --workspacepath frontend/${BUILD_DIR} --outputpath frontend/${SL_BUILD_DIR} --babylonPlugins jsx
+RUN slnodejs scan --tokenfile $SEALIGHTS_TOKEN_FILE --buildsessionid $BSID --scm git --instrumentForBrowsers --workspacepath frontend/${BUILD_DIR} --outputpath frontend/${SL_BUILD_DIR} --uniqueModuleId frontend
 
 FROM registry.access.redhat.com/ubi8/nodejs-20-minimal:latest
 ENV SL_BUILD_DIR=sl_build NODE_DEBUG=sl
