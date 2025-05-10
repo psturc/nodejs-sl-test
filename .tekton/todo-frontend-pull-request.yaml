@@ -181,8 +181,29 @@ spec:
       - name: basic-auth
         workspace: git-auth
     - name: sealights-nodejs-instrumentation
+      params:
+      - name: SOURCE_ARTIFACT
+        value: $(tasks.clone-repository.results.SOURCE_ARTIFACT)
+      - name: component
+        value: nodejs-todoapp-frontend
+      - name: branch
+        value: '{{ source_branch }}'
+      - name: revision
+        value: '{{ revision }}'
+      - name: repository-url
+        value: '{{ repo_url }}'
+      - name: test-event
+        value: '{{ event_type }}'
+      - name: pull-request-number
+        value: '{{ pull_request_number }}'
+      - name: target-branch
+        value: '{{ target_branch }}'
+      - name: workspace-path
+        value: frontend
+      - name: is-frontend
+        value: "true"
       runAfter:
-        - clone-repository
+      - clone-repository
       taskRef:
         params:
         - name: name
@@ -192,27 +213,6 @@ spec:
         - name: kind
           value: task
         resolver: bundles
-      params:
-        - name: SOURCE_ARTIFACT
-          value: $(tasks.clone-repository.results.SOURCE_ARTIFACT)
-        - name: component
-          value: 'nodejs-todoapp-frontend'
-        - name: branch
-          value: '{{ source_branch }}'
-        - name: revision
-          value: '{{ revision }}'
-        - name: repository-url
-          value: '{{ repo_url }}'
-        - name: test-event
-          value: '{{ event_type }}'
-        - name: pull-request-number
-          value: '{{ pull_request_number }}'
-        - name: target-branch
-          value: '{{ target_branch }}'
-        - name: workspace-path
-          value: "frontend"
-        - name: is-frontend
-          value: "true"
     - name: prefetch-dependencies
       params:
       - name: input
@@ -242,7 +242,7 @@ spec:
     - name: build-container
       params:
       - name: ADDITIONAL_SECRET
-        value: sealights-credentials 
+        value: sealights-credentials
       - name: IMAGE
         value: $(params.sealights-output-image)
       - name: DOCKERFILE
@@ -260,8 +260,8 @@ spec:
       - name: BUILD_ARGS
         value:
         - $(params.build-args[*])
-        - "BSID=$(tasks.sealights-nodejs-instrumentation.results.sealights-bsid)"
-        - "AGENT_VERSION=6.1.1006"
+        - BSID=$(tasks.sealights-nodejs-instrumentation.results.sealights-bsid)
+        - AGENT_VERSION=6.1.1006
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
       - name: SOURCE_ARTIFACT
@@ -632,7 +632,8 @@ spec:
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-todo-frontend
   workspaces:
   - name: git-auth
     secret:
