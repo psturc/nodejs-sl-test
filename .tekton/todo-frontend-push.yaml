@@ -8,7 +8,8 @@ metadata:
     pipelinesascode.tekton.dev/cancel-in-progress: "false"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
     pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
-      == "main" && ( "frontend/***".pathChanged() || ".tekton/todo-frontend-push.yaml".pathChanged() )
+      == "main" && ( "frontend/***".pathChanged() || ".tekton/todo-frontend-push.yaml".pathChanged()
+      )
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: slnodejs-todo
@@ -177,8 +178,29 @@ spec:
       - name: basic-auth
         workspace: git-auth
     - name: sealights-nodejs-instrumentation
+      params:
+      - name: SOURCE_ARTIFACT
+        value: $(tasks.clone-repository.results.SOURCE_ARTIFACT)
+      - name: component
+        value: nodejs-todoapp-frontend
+      - name: branch
+        value: '{{ source_branch }}'
+      - name: revision
+        value: '{{ revision }}'
+      - name: repository-url
+        value: '{{ repo_url }}'
+      - name: test-event
+        value: '{{ event_type }}'
+      - name: pull-request-number
+        value: '{{ pull_request_number }}'
+      - name: target-branch
+        value: '{{ target_branch }}'
+      - name: workspace-path
+        value: frontend
+      - name: is-frontend
+        value: "true"
       runAfter:
-        - clone-repository
+      - clone-repository
       taskRef:
         params:
         - name: name
@@ -188,27 +210,6 @@ spec:
         - name: kind
           value: task
         resolver: bundles
-      params:
-        - name: SOURCE_ARTIFACT
-          value: $(tasks.clone-repository.results.SOURCE_ARTIFACT)
-        - name: component
-          value: 'nodejs-todoapp-frontend'
-        - name: branch
-          value: '{{ source_branch }}'
-        - name: revision
-          value: '{{ revision }}'
-        - name: repository-url
-          value: '{{ repo_url }}'
-        - name: test-event
-          value: '{{ event_type }}'
-        - name: pull-request-number
-          value: '{{ pull_request_number }}'
-        - name: target-branch
-          value: '{{ target_branch }}'
-        - name: workspace-path
-          value: "frontend"
-        - name: is-frontend
-          value: "true"
     - name: prefetch-dependencies
       params:
       - name: input
@@ -291,14 +292,14 @@ spec:
       - name: PREFETCH_INPUT
         value: $(params.prefetch-input)
       - name: IMAGE_EXPIRES_AFTER
-        value: "1d"
+        value: 1d
       - name: COMMIT_SHA
         value: $(tasks.clone-repository.results.commit)
       - name: BUILD_ARGS
         value:
         - $(params.build-args[*])
-        - "BSID=$(tasks.sealights-nodejs-instrumentation.results.sealights-bsid)"
-        - "AGENT_VERSION=6.1.1006"
+        - BSID=$(tasks.sealights-nodejs-instrumentation.results.sealights-bsid)
+        - AGENT_VERSION=6.1.1006
       - name: BUILD_ARGS_FILE
         value: $(params.build-args-file)
       - name: SOURCE_ARTIFACT
@@ -670,7 +671,8 @@ spec:
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-todo-frontend
   workspaces:
   - name: git-auth
     secret:
