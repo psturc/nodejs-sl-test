@@ -19,7 +19,7 @@
         "mocha": "^10.2.0",
         "mongodb-memory-server": "^10.1.2",
         "nodemon": "^3.0.1",
-        "supertest": "^6.3.3"
+        "supertest": "^7.0.0"
     },
     "engines": {
         "node": ">=18.0.0"
